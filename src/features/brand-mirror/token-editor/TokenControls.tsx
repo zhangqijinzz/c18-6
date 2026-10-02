@@ -2,6 +2,7 @@ import type { BrandMirrorSnapshot, BrandTheme } from '../models/brandMirrorModel
 
 interface TokenControlsProps {
   snapshot: BrandMirrorSnapshot
+  readOnly?: boolean
   onThemeChange: (theme: BrandTheme) => void
   onColorChange: (field: 'primary' | 'secondary', value: string) => void
   onScaleChange: (field: 'radiusScale' | 'spacingScale' | 'typeScale', index: number, value: number) => void
@@ -14,47 +15,52 @@ const themes: { id: BrandTheme; label: string; note: string }[] = [
   { id: 'night', label: 'Night signal', note: '锐利 · 数字' },
 ]
 
-export function TokenControls({ snapshot, onThemeChange, onColorChange, onScaleChange, onReset }: TokenControlsProps) {
+export function TokenControls({ snapshot, readOnly = false, onThemeChange, onColorChange, onScaleChange, onReset }: TokenControlsProps) {
   return (
     <aside className="control-panel">
-      <div className="panel-heading">
-        <div>
-          <span className="eyebrow">01 / TOKENS</span>
-          <h2>视觉令牌</h2>
+      <fieldset className={`control-fieldset${readOnly ? ' is-readonly' : ''}`} disabled={readOnly}>
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">01 / TOKENS</span>
+            <h2>视觉令牌</h2>
+          </div>
+          <button className="text-button" type="button" onClick={onReset}>恢复默认</button>
         </div>
-        <button className="text-button" type="button" onClick={onReset}>恢复默认</button>
-      </div>
 
-      <section className="control-section">
-        <div className="section-label"><span>基础主题</span><span className="muted">快速起点</span></div>
-        <div className="theme-list">
-          {themes.map((theme) => (
-            <button className={`theme-option ${snapshot.theme === theme.id ? 'selected' : ''}`} key={theme.id} onClick={() => onThemeChange(theme.id)} type="button">
-              <span className={`theme-dot ${theme.id}`} />
-              <span><strong>{theme.label}</strong><small>{theme.note}</small></span>
-              {snapshot.theme === theme.id && <span className="check-mark">✓</span>}
-            </button>
-          ))}
+        <section className="control-section">
+          <div className="section-label"><span>基础主题</span><span className="muted">快速起点</span></div>
+          <div className="theme-list">
+            {themes.map((theme) => (
+              <button className={`theme-option ${snapshot.theme === theme.id ? 'selected' : ''}`} key={theme.id} onClick={() => onThemeChange(theme.id)} type="button" tabIndex={readOnly ? -1 : undefined}>
+                <span className={`theme-dot ${theme.id}`} />
+                <span><strong>{theme.label}</strong><small>{theme.note}</small></span>
+                {snapshot.theme === theme.id && <span className="check-mark">✓</span>}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="control-section">
+          <div className="section-label"><span>品牌色</span><span className="muted">HEX / 6 位</span></div>
+          <div className="color-fields">
+            <ColorField label="主色" value={snapshot.tokens.primary} onChange={(value) => onColorChange('primary', value)} />
+            <ColorField label="辅助色" value={snapshot.tokens.secondary} onChange={(value) => onColorChange('secondary', value)} />
+          </div>
+          <div className={`contrast-note ${snapshot.contrastWarning ? 'warning' : ''}`}>
+            <span className="contrast-icon">◐</span>
+            <span>对比度 <strong>{snapshot.contrastRatio.toFixed(1)}:1</strong> · {snapshot.contrastWarning ? '建议提高对比度' : '适合界面使用'}</span>
+          </div>
+        </section>
+
+        <ScaleControl label="圆角尺度" hint="px" values={snapshot.tokens.radiusScale} field="radiusScale" onChange={onScaleChange} />
+        <ScaleControl label="间距体系" hint="px" values={snapshot.tokens.spacingScale} field="spacingScale" onChange={onScaleChange} />
+        <ScaleControl label="字体比例" hint="px" values={snapshot.tokens.typeScale} field="typeScale" onChange={onScaleChange} />
+
+        <div className="panel-footer">
+          <span className="live-dot" />
+          {readOnly ? '只读视图：令牌已随分享冻结，无法调整' : '所有调整实时同步到预览'}
         </div>
-      </section>
-
-      <section className="control-section">
-        <div className="section-label"><span>品牌色</span><span className="muted">HEX / 6 位</span></div>
-        <div className="color-fields">
-          <ColorField label="主色" value={snapshot.tokens.primary} onChange={(value) => onColorChange('primary', value)} />
-          <ColorField label="辅助色" value={snapshot.tokens.secondary} onChange={(value) => onColorChange('secondary', value)} />
-        </div>
-        <div className={`contrast-note ${snapshot.contrastWarning ? 'warning' : ''}`}>
-          <span className="contrast-icon">◐</span>
-          <span>对比度 <strong>{snapshot.contrastRatio.toFixed(1)}:1</strong> · {snapshot.contrastWarning ? '建议提高对比度' : '适合界面使用'}</span>
-        </div>
-      </section>
-
-      <ScaleControl label="圆角尺度" hint="px" values={snapshot.tokens.radiusScale} field="radiusScale" onChange={onScaleChange} />
-      <ScaleControl label="间距体系" hint="px" values={snapshot.tokens.spacingScale} field="spacingScale" onChange={onScaleChange} />
-      <ScaleControl label="字体比例" hint="px" values={snapshot.tokens.typeScale} field="typeScale" onChange={onScaleChange} />
-
-      <div className="panel-footer"><span className="live-dot" />所有调整实时同步到预览</div>
+      </fieldset>
     </aside>
   )
 }
