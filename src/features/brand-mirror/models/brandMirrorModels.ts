@@ -23,6 +23,21 @@ export interface BrandDocument {
   versions: SavedVersion[]
 }
 
+export interface SharedWorkspace {
+  format: 'brandmirror-share'
+  version: 1
+  tokens: BrandTokens
+  theme: BrandTheme
+  versions: SavedVersion[]
+  createdAt: string
+  expiresAt: string
+}
+
+export interface ShareMeta {
+  createdAt: string
+  expiresAt: string
+}
+
 export interface BrandMirrorSnapshot {
   status: MirrorStatus
   tokens: BrandTokens
@@ -33,6 +48,8 @@ export interface BrandMirrorSnapshot {
   contrastRatio: number
   contrastWarning: boolean
   message: string
+  readOnly: boolean
+  share: ShareMeta | null
 }
 
 export const INITIAL_TOKENS: BrandTokens = {

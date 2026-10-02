@@ -25,6 +25,20 @@ export function clampTokenValues(tokens: BrandTokens): BrandTokens {
   }
 }
 
+export function isValidTokenShape(value: unknown): value is BrandTokens {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<BrandTokens>
+  return typeof candidate.primary === 'string'
+    && typeof candidate.secondary === 'string'
+    && isNumberScale(candidate.radiusScale, 4)
+    && isNumberScale(candidate.spacingScale, 5)
+    && isNumberScale(candidate.typeScale, 6)
+}
+
+function isNumberScale(value: unknown, length: number): value is number[] {
+  return Array.isArray(value) && value.length === length && value.every((item) => typeof item === 'number' && Number.isFinite(item))
+}
+
 export function validateTokens(tokens: BrandTokens): string | null {
   if (!isHexColor(tokens.primary) || !isHexColor(tokens.secondary)) return '请输入 6 位 HEX 颜色'
   if (tokens.radiusScale.length !== 4 || tokens.spacingScale.length !== 5 || tokens.typeScale.length !== 6) return '令牌层级数量不完整'

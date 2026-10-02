@@ -3,6 +3,7 @@ import { BrandMirrorViewModel } from '../viewmodels/brandMirrorViewModel'
 import type { BrandDocument } from '../models/brandMirrorModels'
 import type { BrandRepository } from '../repositories/brandRepository'
 import { buildBrandGuidelinesMarkdown, type BrandGuidelinesExporter } from '../services/exportService'
+import { WorkspaceShareLinkCodec, type ShareLinkService } from '../services/shareLinkService'
 
 class MemoryRepository implements BrandRepository {
   document: BrandDocument | null = null
@@ -14,6 +15,16 @@ class MemoryRepository implements BrandRepository {
 class MemoryExporter implements BrandGuidelinesExporter {
   received: string | null = null
   export(snapshot: Parameters<BrandGuidelinesExporter['export']>[0]): void { this.received = buildBrandGuidelinesMarkdown(snapshot) }
+}
+
+class MemoryShareLinkService extends WorkspaceShareLinkCodec implements ShareLinkService {
+  copiedLink: string | null = null
+  returnedToLocal = false
+  clearedHash = false
+
+  async copyShareLink(link: string): Promise<void> { this.copiedLink = link }
+  clearShareHash(): void { this.clearedHash = true }
+  returnToLocalWorkspace(): void { this.returnedToLocal = true }
 }
 
 describe('BrandMirrorViewModel', () => {
@@ -68,5 +79,39 @@ describe('BrandMirrorViewModel', () => {
     expect(exporter.received).toContain('# BrandMirror 品牌规范')
     expect(exporter.received).toContain('`primary`')
     expect(viewModel.getSnapshot().message).toContain('导出')
+  })
+
+  it('creates a copyable share link without changing the local repository', async () => {
+    const repository = new MemoryRepository()
+    const shareLinks = new MemoryShareLinkService()
+    const viewModel = new BrandMirrorViewModel(repository, undefined, shareLinks)
+    viewModel.initialize()
+    await viewModel.createShareLink()
+
+    expect(shareLinks.copiedLink).toContain('#/share/')
+    expect(repository.document).toBeNull()
+    expect(viewModel.getSnapshot().message).toContain('只读')
+  })
+
+  it('keeps a shared workspace read-only and does not write to a local repository', () => {
+    const repository = new MemoryRepository()
+    const shareLinks = new MemoryShareLinkService()
+    const link = shareLinks.createShareLink({ theme: 'night', tokens: { primary: '#A98BFF', secondary: '#191829', radiusScale: [6, 10, 14, 22], spacingScale: [4, 8, 12, 18, 28], typeScale: [12, 14, 16, 20, 28, 38] }, versions: [] }, new Date('2026-10-01T00:00:00.000Z'))
+    const parsed = shareLinks.parseHash(link, new Date('2026-10-01T00:00:00.000Z'))
+    expect(parsed.status).toBe('valid')
+    if (parsed.status !== 'valid') return
+
+    const viewModel = new BrandMirrorViewModel(repository, undefined, shareLinks)
+    viewModel.initializeSharedWorkspace(parsed.workspace)
+    viewModel.updateColor('primary', '#123456')
+    viewModel.reset()
+    viewModel.saveVersion()
+    viewModel.returnToLocalWorkspace()
+
+    expect(viewModel.getSnapshot().readOnly).toBe(true)
+    expect(viewModel.getSnapshot().tokens.primary).toBe('#A98BFF')
+    expect(viewModel.getSnapshot().message).toContain('只读')
+    expect(repository.document).toBeNull()
+    expect(shareLinks.returnedToLocal).toBe(true)
   })
 })

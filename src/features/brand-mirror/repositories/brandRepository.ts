@@ -1,5 +1,5 @@
 import type { BrandDocument } from '../models/brandMirrorModels'
-import { clampTokenValues, validateTokens } from '../domain/brandRules'
+import { clampTokenValues, isValidTokenShape, validateTokens } from '../domain/brandRules'
 import type { StorageService } from '../services/storageService'
 
 export interface BrandRepository {
@@ -29,8 +29,18 @@ export class LocalBrandRepository implements BrandRepository {
   }
 }
 
+export class ReadOnlyBrandRepository implements BrandRepository {
+  load(): BrandDocument | null {
+    return null
+  }
+
+  save(): void {
+    throw new Error('分享视图为只读，不能写入工作区')
+  }
+}
+
 function isDocument(value: unknown): value is BrandDocument {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Partial<BrandDocument>
-  return candidate.version === 1 && !!candidate.tokens && Array.isArray(candidate.versions) && typeof candidate.theme === 'string'
+  return candidate.version === 1 && isValidTokenShape(candidate.tokens) && Array.isArray(candidate.versions) && typeof candidate.theme === 'string'
 }
